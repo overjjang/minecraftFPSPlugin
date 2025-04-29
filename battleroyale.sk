@@ -74,11 +74,11 @@ command /br [<text>] [<number>]:
 
 command /chd:
     trigger:
-        make player execute command "/setblock ~ ~ ~ tacz:gun_smith_table"
+        make player execute command "/give @s tacz:gun_smith_table"
 
 command /총:
     trigger:
-        make player execute command "/setblock ~ ~ ~ tacz:gun_smith_table"
+        make player execute command "/give @s tacz:gun_smith_table"
 
 command /기본템설정:
     trigger:
