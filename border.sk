@@ -81,7 +81,7 @@ function brBorderinit():
     #teamInit(2)
 
 function brGetspawnloc(type: text) :: location:
-    set {_space} to 500 #끝점에서 얼마나 여유를 두고 스폰시킬건지
+    set {_space} to 100 #끝점에서 얼마나 여유를 두고 스폰시킬건지
 
     if {_type} is "++":
         set {_x} to {BR.flag.borderCenter.x} + ({BR.flag.borderSize} / 2) - {_space}

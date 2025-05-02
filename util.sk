@@ -11,32 +11,103 @@ function updateCompass():
         send "{@p} 나침반이 업데이트 되었습니다" to loop-player
 
 function brSuply():
-    set {_tmp} to {BR.flag.phase} + 1
-    set {_newsize} to {BR.data.borderSize::%{_tmp}%}
-    set {_coords::*} to makeRandomcenter({_newsize},10,{BR.flag.nextborderCenter.x},{BR.flag.nextborderCenter.z})
-    set {_x} to {_coords::1}
-    set {_z} to {_coords::2}
-    set {_tmploc} to location at {_x}, 256, {_z} of the world "world"
+    # set {_tmp} to {BR.flag.phase} + 1
+    # set {_newsize} to {BR.data.borderSize::%{_tmp}%}
+    # set {_coords::*} to makeRandomcenter({_newsize},10,{BR.flag.nextborderCenter.x},{BR.flag.nextborderCenter.z})
+    # set {_x} to {_coords::1}
+    # set {_z} to {_coords::2}
+    # set {_tmploc} to location at {_x}, 256, {_z} of the world "world"
+    # while block at {_tmploc} is air:
+    #     set {_y} to y-coordinate of {_tmploc}
+    #     set y-coordinate of {_tmploc} to {_y} - 1
+    # set y-coordinate of {_tmploc} to {_y}
+    # set block at {_tmploc} to chest
+    # set {_int} to random integer between 1 and 5
+    # set slot 0 of block at {_tmploc} to ({_int} of blaze rod)
+    # set {_int} to random integer between 0 and 2
+    # set slot 1 of block at {_tmploc} to ({_int} of netherite ingot)
+    # set {_int} to random integer between 5 and 10
+    # set slot 2 of block at {_tmploc} to ({_int} of quartz)
+    # set {_int} to random integer between 5 and 8
+    # set slot 3 of block at {_tmploc} to ({_int} of glowstone dust)
+    # set {_int} to random integer between 64 and 64
+    # set slot 4 of block at {_tmploc} to ({_int} of iron ingot)
+    # set {_int} to random integer between 32 and 64
+    # set slot 5 of block at {_tmploc} to ({_int} of iron ingot)
+    # set {_int} to random integer between 10 and 30
+    # set slot 6 of block at {_tmploc} to ({_int} of gold ingot)
+    # broadcast "{@p} ( %{_x}%, %{_z}% ) 에 보급이 소환되었습니다!"
+    set {CO.flag.supply.x} to random integer from 1000 to 3000
+    set {CO.flag.supply.z} to random integer from 1000 to 3000
+    send "&5( %{CO.flag.supply.x}%, %{CO.flag.supply.z}% ) 에 보급이 소환되었습니다" to all players
+    set {_tmploc} to location at {CO.flag.supply.x}, 256, {CO.flag.supply.z} of the world "world"
     while block at {_tmploc} is air:
         set {_y} to y-coordinate of {_tmploc}
         set y-coordinate of {_tmploc} to {_y} - 1
-    set y-coordinate of {_tmploc} to {_y}
+    set {CO.flag.supply.y} to {_y}
     set block at {_tmploc} to chest
-    set {_int} to random integer between 1 and 5
-    set slot 0 of block at {_tmploc} to ({_int} of blaze rod)
-    set {_int} to random integer between 0 and 2
-    set slot 1 of block at {_tmploc} to ({_int} of netherite ingot)
-    set {_int} to random integer between 5 and 10
-    set slot 2 of block at {_tmploc} to ({_int} of quartz)
-    set {_int} to random integer between 5 and 8
-    set slot 3 of block at {_tmploc} to ({_int} of glowstone dust)
-    set {_int} to random integer between 64 and 64
-    set slot 4 of block at {_tmploc} to ({_int} of iron ingot)
-    set {_int} to random integer between 32 and 64
-    set slot 5 of block at {_tmploc} to ({_int} of iron ingot)
-    set {_int} to random integer between 10 and 30
-    set slot 6 of block at {_tmploc} to ({_int} of gold ingot)
-    broadcast "{@p} ( %{_x}%, %{_z}% ) 에 보급이 소환되었습니다!"
+    set name of block at {_tmploc} to "보급상자"
+
+# 보급 아이템 설정 명령어
+command /보급설정:
+    trigger:
+        open chest inventory with 6 row named "보급 아이템 설정" to player
+        loop {CO.items::*}:
+            set slot (loop-counter)-1 of current inventory of player to loop-value
+
+# 보급 아이템 저장
+on inventory close:
+    if name of current inventory of player is "보급 아이템 설정":
+        delete {CO.items::*}
+        loop 54 times:
+            if slot (loop-counter)-1 of current inventory of player is not air:
+                add slot (loop-counter)-1 of current inventory of player to {CO.items::*}
+        send "&a보급 아이템이 설정되었습니다!" to player
+
+# 보급 상자 클릭 이벤트
+on click on chest:
+    if name of event-block is "보급상자":
+        cancel event
+        set {_x} to x-coordinate of location of event-block
+        set {_y} to y-coordinate of location of event-block
+        set {_z} to z-coordinate of location of event-block
+
+        # 설정된 보급 아이템 중 2개를 무작위로 선택
+        set {_tmpItem::*} to {CO.items::*}
+        set {_item1} to random element out of {_tmpItem::*}
+        remove {_item1} from {_tmpItem::*} # 중복 방지
+        set {_item2} to random element out of {_tmpItem::*}
+
+        # 첫 번째 아이템 드랍
+        if {_item1} is not air:
+            drop {_item1} at location of event-block
+
+        # 두 번째 아이템 드랍
+        if {_item2} is not air:
+            drop {_item2} at location of event-block
+
+        # 상자 제거
+        set block at location of event-block to air
+        play sound "subtitle.entity.experience_orb.pickup" with volume 1 and pitch 1 to player
+
+command /suplytest:
+    trigger:
+        brSuply()
+
+command /밥:
+    trigger:
+        give 64 of bread to player
+
+on join:
+    set player's max health to 20
+    heal player
+on respawn:
+    wait 1 tick
+    set player's max health to 20
+    heal player
+on damage:
+    if attacker is not player:
+        set damage to damage / 2
 
 on break:
     if event-block is iron ore:
@@ -76,25 +147,106 @@ on break:
         drop {_rnd} of glass block at event-block
         set block at event-block to air
 
-command /suplytest:
-    trigger:
-        brSuply()
 
-command /밥:
-    trigger:
-        give 64 of bread to player
+on rightclick:
+    if player's tool is compass:
+        open chest inventory with 1 row named "나침반 설정" to player
+        set slot 3 of current inventory of player to green wool named "&a거점"
+        set slot 5 of current inventory of player to chest named "&a보급상자"
 
-on join:
-    set player's max health to 20
-    heal player
-on respawn:
+on inventory click:
+    if name of current inventory of player is "나침반 설정":
+        if raw index of event-slot > 27: # outside custom inventory
+            cancel event
+        if index of event-slot is 3:
+            cancel event
+            close player's inventory
+            set player's compass target to location at {CO.captureObject.centerX}, 0, {CO.captureObject.centerZ} of the world "world"
+            send "&a나침반이 거점으로 설정되었습니다" to player
+        if index of event-slot is 5:
+            cancel event
+            close player's inventory
+            set player's compass target to location at {CO.flag.supply.x}, {CO.flag.supply.y}, {CO.flag.supply.z} of the world "world"
+            send "&a나침반이 보급 상자로 설정되었습니다" to player
+
+
+
+
+on death of player:
+    set {excludedItems::*} to iron ingot and gold ingot and copper ingot and netherite ingot and diamond and quartz and amethyst shard and glowstone dust 
+    set {_x} to x-coordinate of victim's location
+    set {_y} to y-coordinate of victim's location
+    set {_z} to z-coordinate of victim's location
+    set {_loc} to location at {_x}, {_y}, {_z} of the world "world"
+
+    set victim's gamemode to spectator
     wait 1 tick
-    set player's max health to 20
-    heal player
-on damage:
-    if attacker is not player:
-        set damage to damage / 2
+    teleport victim to {_loc}
+    if {CO.flag.phase} >= 1:
+        set {_item::*} to all items in victim's inventory
+        loop {_item::*}:
+            if loop-value is not air:
+                if {excludedItems::*} contains loop-value:
+                    drop loop-value
+                    remove loop-value from victim's inventory
 
+        set {_teamNumber} to {BR.player.team.%uuid of victim%} # 사망한 플레이어의 팀 번호 가져오기
+        set {_team::*} to {BR.flag.team.%{_teamNumber}%::*} # 해당 팀의 팀원 목록 가져오기
+
+        if size of {_team::*} > 1: # 팀원이 있을 경우
+            remove victim from {_team::*} # 사망한 플레이어는 제외
+            set {_teammate} to random element out of {_team::*} # 랜덤 팀원 선택
+            if {_teammate} is online:
+                send title "팀원이 생존 중입니다" to victim
+                send subtitle "5초 후 부활합니다" to victim
+                wait 5 seconds
+                teleport victim to location of {_teammate}
+                set gamemode of victim to survival
+                heal victim
+            else:
+                send title "&c전멸 했습니다" to all players in {_team::*}
+                send subtitle "&75초 후 팀원 전체가 부활합니다" to all players in {_team::*}
+                wait 5 seconds
+                set {_x} to random integer from 1000 to 3000
+                set {_z} to random integer from 1000 to 3000
+                set {_y} to 256
+                while block at location at {_x}, {_y}, {_z} is air:
+                    set {_y} to {_y} - 1
+                set {_y} to {_y} + 1
+                loop {_team::*}:
+                    teleport loop-value to location {_x}, {_y}, {_z} in world "world"
+                    set gamemode of loop-value to survival
+                    heal loop-value
+                teleport victim to location {_x}, {_y}, {_z} in world "world"
+                set gamemode of victim to survival
+                heal victim
+        else: # 팀원이 없을 경우
+            send title "&c전멸 했습니다" to all players in {_team::*}
+            send subtitle "&75초 후 부활합니다" to all players in {_team::*}
+            wait 5 seconds
+            set {_x} to random integer between 1000 and 3000
+            set {_z} to random integer between 1000 and 3000
+            set {_y} to 256
+            while block at location at {_x}, {_y}, {_z} is air:
+                set {_y} to {_y} - 1
+            set {_y} to {_y} + 1
+            teleport victim to location at {_x}, {_y}, {_z} in world "world"
+            set gamemode of victim to survival
+            heal victim
+    else:
+        send title "&e5초 후 부활합니다" to victim
+        wait 5 seconds
+        set {_tmpX} to x-coordinate of {_loc}
+        set {_x} to random integer from ({_tmpX}-15) to ({_tmpX}+15)
+        set {_tmpZ} to z-coordinate of {_loc}
+        set {_z} to random integer from ({_tmpZ}-15) to ({_tmpZ}+15)
+        set {_y} to 256
+        while block at location at {_x}, {_y}, {_z} is air:
+            set {_y} to {_y} - 1
+        set {_y} to {_y} + 1
+        teleport victim to location at {_x}, {_y}, {_z} in world "world"
+        set gamemode of victim to survival
+        heal victim
 
 on death:
     if attacker is player:
@@ -102,3 +254,10 @@ on death:
         drop {_rnd} of gunpowder at victim's location
         chance of 35%:
             drop 1 of amethyst shard at victim's location
+
+# on respawn:
+#     wait 1 tick
+
+#     loop all items in player's inventory:
+#         if loop-value is {droppedItems::%uuid of player%::*}:
+#             remove loop-value from player's inventory

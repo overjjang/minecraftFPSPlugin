@@ -3,24 +3,27 @@ options:
 
 
 function captureObjectGameInit(teamSize: number):
-    set {BR.flag.borderSize} to 3000
-    set {BR.flag.borderCenter.x} to random integer between -1000 and 1000
-    set {BR.flag.borderCenter.z} to random integer between -1000 and 1000
-
-    set {_x1} to {BR.flag.borderCenter.x} + ({BR.flag.borderSize} / 2)
-    set {_x2} to {BR.flag.borderCenter.x} - ({BR.flag.borderSize} / 2)
-    set {_z1} to {BR.flag.borderCenter.z} + ({BR.flag.borderSize} / 2)
-    set {_z2} to {BR.flag.borderCenter.z} - ({BR.flag.borderSize} / 2)
-    send "%{_x1}%,%{_x2}%,%{_z1}%,%{_z2}%" to all players
+    set {BR.flag.borderSize} to 1250
+    set {BR.flag.borderCenter.x} to random integer from 1000 to 3000
+    set {BR.flag.borderCenter.z} to random integer from 1000 to 3000
+    make all players execute command "/기본탬"
+    set {CO.flag.x1} to {BR.flag.borderCenter.x} + ({BR.flag.borderSize} / 2)
+    set {CO.flag.x2} to {BR.flag.borderCenter.x} - ({BR.flag.borderSize} / 2)
+    set {CO.flag.z1} to {BR.flag.borderCenter.z} + ({BR.flag.borderSize} / 2)
+    set {CO.flag.z2} to {BR.flag.borderCenter.z} - ({BR.flag.borderSize} / 2)
+    loop {CO.team.score::*}:
+        set {CO.team.score::%loop-value%} to 0
 
     set {CO.flag.inIngame} to true
     set {CO.flag.gametime} to 0
     set {CO.flag.timer} to 0
     set {CO.delay} to 300
     set {CO.flag.phase} to 1
+
+    set {CO.flag.captureObject.conflict} to 0
     delete {CO.team.captures::*}
     teamInit({_teamSize})
-    send "{@p} 게임이 시작되었습니다! 5분 뒤 거점 위치가 공개됩니다." to all players
+    send "게임이 시작되었습니다! 5분 뒤 거점 위치가 공개됩니다." to all players
     if {_teamSize} == 1:
         set {_message} to "&c레드 팀: 0"
     else if {_teamSize} == 2:
@@ -39,48 +42,54 @@ function captureObjectGameInit(teamSize: number):
     while {CO.flag.phase} > 0:
         add 1 to {CO.flag.gametime}
         add 1 to {CO.flag.timer}
-        if {CO.flag.gametime} == 300:
+        if {CO.flag.gametime} == 600:
             set {CO.flag.phase} to 2
             set {CO.flag.timer} to 0
             set bar color of {_bar} to purple
             set bar progress of {_bar} to 0
-            createCaptureObject({_x1},{_x2},{_z1},{_z2})
-        if {CO.flag.gametime} == 600:
+            createCaptureObject({CO.flag.x1},{CO.flag.x2},{CO.flag.z1},{CO.flag.z2})
+            play sound "subtitles.entity.experience_orb.pickup" with volume 1 and pitch 1 to all players
+        if {CO.flag.gametime} == 900:
             set {CO.flag.phase} to 3
             set {CO.flag.timer} to 0
             set bar color of {_bar} to white
             set bar progress of {_bar} to 0
-        
+            send "&f거점이 활성화되었습니다!" to all players
+            play sound "subtitles.entity.player.levelup" with volume 1 and pitch 1 to all players
         if {CO.flag.phase} is 1:
-            set bar progress of {_bar} to ({CO.flag.timer} / 300) * 100
+            set bar progress of {_bar} to ({CO.flag.timer} / 600) * 100
         if {CO.flag.phase} is 2:
             set bar progress of {_bar} to ({CO.flag.timer} / 300) * 100
             spawnParticlesInBorder("yellow")
         if {CO.flag.phase} is 3:
             spawnParticlesInBorder("red")
-            checkCaptureObject({_bar})
+            checkCaptureObject({_bar},{_teamSize})
+        if ({CO.flag.gametime} mod 600) == 0:
+            brSuply()
         wait 1 second
     
     
-    remove all players from {_bar}    
+    remove all players from {_bar}
+    delete {CO.team.score::*}
     stop
 
 
 function createCaptureObject(x1:number,x2:number,z1:number,z2:number):
-    send "%{_x1}%,%{_x2}%,%{_z1}%,%{_z2}%" to all players
-    set {CO.flag.captureObject.centerX} to random integer from -1500 to 1500
-    set {CO.flag.captureObject.centerZ} to random integer from -1500 to 1500
+    set {CO.flag.captureObject.centerX} to random integer from 1000 to 3000
+    set {CO.flag.captureObject.centerZ} to random integer from 1000 to 3000
     set {CO.flag.captureObject.size} to (random integer from 1 to 3) * 10
     set {CO.flag.captureObject.x1} to {CO.flag.captureObject.centerX} - ({CO.flag.captureObject.size} / 2)
     set {CO.flag.captureObject.x2} to {CO.flag.captureObject.centerX} + ({CO.flag.captureObject.size} / 2)
     set {CO.flag.captureObject.z1} to {CO.flag.captureObject.centerZ} - ({CO.flag.captureObject.size} / 2)
     set {CO.flag.captureObject.z2} to {CO.flag.captureObject.centerZ} + ({CO.flag.captureObject.size} / 2)
     set {CO.flag.objloc} to location at {CO.flag.captureObject.centerX}, 256, {CO.flag.captureObject.centerZ} of the world "world"
-    send "%{CO.flag.captureObject.centerX}%, %{CO.flag.captureObject.centerZ}% &f에 거점이 생성되었습니다. size:%{CO.flag.captureObject.size}%" to all players
+    send "&e%{CO.flag.captureObject.centerX}%, %{CO.flag.captureObject.centerZ}% &f에 거점이 생성되었습니다." to all players
+    make console execute command "/give @a filled_map{map:0, Decorations:[{type:""target_point"", x:%{CO.flag.captureObject.centerX}%, z:%{CO.flag.captureObject.centerZ}%, rot:0.0f, id:""Target""}]} 1"
     while block at {CO.flag.objloc} is air:
         set {_y} to y-coordinate of {CO.flag.objloc}
         set y-coordinate of {CO.flag.objloc} to {_y} - 1
     
+
 function spawnParticlesInBorder(color: text):
     # 전역 변수에서 경계 좌표 가져오기
     set {_x1} to {CO.flag.captureObject.x1}
@@ -138,21 +147,23 @@ function spawnParticlesInBorder(color: text):
             make 140 of dust using dustOption(red, 2) at {_NEloc} with offset vector(0,0,30) with extra 0
             
 
-function checkCaptureObject(bar : object):
+function checkCaptureObject(bar: object,teamSize:number):
     set {_x1} to {CO.flag.captureObject.x1}
     set {_x2} to {CO.flag.captureObject.x2}
     set {_z1} to {CO.flag.captureObject.z1}
     set {_z2} to {CO.flag.captureObject.z2}
+    set {_y} to y-coordinate of {CO.flag.objloc}
     clear {_teamsInArea::*}  # 배열 초기화
     
-    loop all players:
+    loop all players :
         set {_uuid} to uuid of loop-player
         set {_pteam} to {BR.player.team.%{_uuid}%}
         set {_loc} to location of loop-player
         if x-coordinate of {_loc} is between {_x1} and {_x2}:
             if z-coordinate of {_loc} is between {_z1} and {_z2}:
-                if y-coordinate of {_loc} is between y-coordinate of {CO.flag.objloc} - 5 and y-coordinate of {CO.flag.objloc} + 10:
+                if y-coordinate of {_loc} is between {_y}-5 and {_y}+10:
                     add {_pteam} to {_teamsInArea::*}
+    
     clear {_uniqueTeams::*}  # 중복 제거를 위한 배열 초기화
     loop {_teamsInArea::*}:
         if loop-value is not in {_uniqueTeams::*}:
@@ -160,36 +171,61 @@ function checkCaptureObject(bar : object):
     
     if size of {_uniqueTeams::*} is 1:
         set {_capturingTeam} to {_uniqueTeams::1}
+        if {CO.flag.captureObject.conflict} == 0 or {CO.flag.captureObject.conflict} == 2:
+            set {CO.flag.captureObject.conflict} to 1
+            play sound "subtitles.entity.experience_orb.pickup" with volume 1 and pitch 1 to all players
+            if {_capturingTeam} is 1:
+                send "&c레드 팀이 거점을 점령중입니다!" to all players
+            else if {_capturingTeam} is 2:
+                send "&9블루 팀이 거점을 점령중입니다!" to all players
+            else if {_capturingTeam} is 3:
+                send "&a그린 팀이 거점을 점령중입니다!" to all players
+            else if {_capturingTeam} is 4:
+                send "&e옐로 팀이 거점을 점령중입니다!" to all players
         add 1 to {CO.team.captures::%{_capturingTeam}%}
         set bar progress of {_bar} to ({CO.team.captures::%{_capturingTeam}%} / 60) * 100
-        set bar title of {_bar} to "%{CO.team.captures::%{_capturingTeam}%}% / 60"
-        send "&a거점에 &f%{_capturingTeam}% &a팀만 남아있습니다! 점수: %{CO.team.captures::%{_capturingTeam}%}%" to all players
-        # 팀에 따라 보스바 색상 변경
         if {_capturingTeam} is 1:
             set bar color of {_bar} to red
+            set bar title of {_bar} to "&c거점 점령 상태 (%{CO.team.captures::%{_capturingTeam}%}%/60)"
         else if {_capturingTeam} is 2:
             set bar color of {_bar} to blue
+            set bar title of {_bar} to "&9거점 점령 상태 (%{CO.team.captures::%{_capturingTeam}%}%/60)"
         else if {_capturingTeam} is 3:
             set bar color of {_bar} to green
+            set bar title of {_bar} to "&a거점 점령 상태 (%{CO.team.captures::%{_capturingTeam}%}%/60)"
         else if {_capturingTeam} is 4:
             set bar color of {_bar} to yellow
-        else:
-            set bar color of {_bar} to white
+            set bar title of {_bar} to "&e거점 점령 상태 (%{CO.team.captures::%{_capturingTeam}%}%/60)"
         if {CO.team.captures::%{_capturingTeam}%} == 60:
             set {CO.flag.gametime} to 0
             set {CO.flag.timer} to 0
             set {CO.flag.phase} to 1
             if {_capturingTeam} is 1:
-                add 1 to {CO.team.score.red}
+                add 1 to {CO.team.score.1}
             else if {_capturingTeam} is 2:
-                add 1 to {CO.team.score.blue}
+                add 1 to {CO.team.score.2}
             else if {_capturingTeam} is 3:
-                add 1 to {CO.team.score.green}
+                add 1 to {CO.team.score.3}
             else if {_capturingTeam} is 4:
-                add 1 to {CO.team.score.yellow}
+                add 1 to {CO.team.score.4}
+            set {_message} to "&c레드 팀: %{CO.team.score.1}%"
+            if {_teamSize} == 2:
+                set {_message} to "%{_message}% &fvs &9블루 팀: %{CO.team.score.2}%"
+            if {_teamSize} == 3:
+                set {_message} to "%{_message}% &fvs &a그린 팀: %{CO.team.score.3}%"
+            if {_teamSize} == 4:
+                set {_message} to "%{_message}% &fvs &e옐로 팀: %{CO.team.score.4}%"
+            set bar title of {_bar} to "%{_message}%"
+            set bar color of {_bar} to yellow
+            play sound "subtitles.entity.ender_dragon.growl" with volume 1 and pitch 1 to all players
+            set bar progress of {_bar} to 0
+            loop {CO.team.captures::*}:
+                set {CO.team.captures::%loop-value%} to 0
     else if size of {_uniqueTeams::*} > 1:
-        send "&c거점에 여러 팀이 있습니다! 점수가 오르지 않습니다." to all players
-        set bar color of {_bar} to purple  # 여러 팀이 있을 때 보스바 색상
+        if {CO.flag.captureObject.conflict} == 1:
+            set {CO.flag.captureObject.conflict} to 2
+            send "&c거점에 여러 팀이 있습니다! 점수가 오르지 않습니다." to all players
+        set bar color of {_bar} to purple
 
 
 
@@ -225,3 +261,8 @@ command /objectDebug:
         make player execute command "/setPhase 0"
         captureObjectGameInit(1)
         make player execute command "/setGameTime 299"
+
+command /clearObjectPoint:
+    trigger:
+        delete {CO.team.captures::*}
+        send "거점 점령 점수를 초기화했습니다." to player
