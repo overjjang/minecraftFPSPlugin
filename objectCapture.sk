@@ -1,12 +1,9 @@
-options:
-    p: &c( 점령전 ) &f
-
-
 function captureObjectGameInit(teamSize: number):
     set {BR.flag.borderSize} to 1250
     set {BR.flag.borderCenter.x} to random integer from 1000 to 3000
     set {BR.flag.borderCenter.z} to random integer from 1000 to 3000
-    make all players execute command "/기본탬"
+    loop all players:
+        make loop-player execute command "/rlqhsxoa"
     set {CO.flag.x1} to {BR.flag.borderCenter.x} + ({BR.flag.borderSize} / 2)
     set {CO.flag.x2} to {BR.flag.borderCenter.x} - ({BR.flag.borderSize} / 2)
     set {CO.flag.z1} to {BR.flag.borderCenter.z} + ({BR.flag.borderSize} / 2)
@@ -14,6 +11,7 @@ function captureObjectGameInit(teamSize: number):
     loop {CO.team.score::*}:
         set {CO.team.score::%loop-value%} to 0
 
+    set {CO.flag.supplytime} to 0
     set {CO.flag.inIngame} to true
     set {CO.flag.gametime} to 0
     set {CO.flag.timer} to 0
@@ -42,20 +40,21 @@ function captureObjectGameInit(teamSize: number):
     while {CO.flag.phase} > 0:
         add 1 to {CO.flag.gametime}
         add 1 to {CO.flag.timer}
+        add 1 to {CO.flag.supplytime}
         if {CO.flag.gametime} == 600:
             set {CO.flag.phase} to 2
             set {CO.flag.timer} to 0
             set bar color of {_bar} to purple
             set bar progress of {_bar} to 0
             createCaptureObject({CO.flag.x1},{CO.flag.x2},{CO.flag.z1},{CO.flag.z2})
-            play sound "subtitles.entity.experience_orb.pickup" with volume 1 and pitch 1 to all players
+            play sound "entity.experience_orb.pickup" with volume 1 and pitch 1 to all players
         if {CO.flag.gametime} == 900:
             set {CO.flag.phase} to 3
             set {CO.flag.timer} to 0
             set bar color of {_bar} to white
             set bar progress of {_bar} to 0
             send "&f거점이 활성화되었습니다!" to all players
-            play sound "subtitles.entity.player.levelup" with volume 1 and pitch 1 to all players
+            play sound "entity.player.levelup" with volume 1 and pitch 1 to all players
         if {CO.flag.phase} is 1:
             set bar progress of {_bar} to ({CO.flag.timer} / 600) * 100
         if {CO.flag.phase} is 2:
@@ -64,14 +63,18 @@ function captureObjectGameInit(teamSize: number):
         if {CO.flag.phase} is 3:
             spawnParticlesInBorder("red")
             checkCaptureObject({_bar},{_teamSize})
-        if ({CO.flag.gametime} mod 600) == 0:
+        if mod({CO.flag.supplytime},600) is 0:
             brSuply()
         wait 1 second
-    
     
     remove all players from {_bar}
     delete {CO.team.score::*}
     stop
+
+# every 10 minute:
+#     if {CO.flag.phase} > 0:
+#         brSuply()
+
 
 
 function createCaptureObject(x1:number,x2:number,z1:number,z2:number):
@@ -83,8 +86,9 @@ function createCaptureObject(x1:number,x2:number,z1:number,z2:number):
     set {CO.flag.captureObject.z1} to {CO.flag.captureObject.centerZ} - ({CO.flag.captureObject.size} / 2)
     set {CO.flag.captureObject.z2} to {CO.flag.captureObject.centerZ} + ({CO.flag.captureObject.size} / 2)
     set {CO.flag.objloc} to location at {CO.flag.captureObject.centerX}, 256, {CO.flag.captureObject.centerZ} of the world "world"
-    send "&e%{CO.flag.captureObject.centerX}%, %{CO.flag.captureObject.centerZ}% &f에 거점이 생성되었습니다." to all players
-    make console execute command "/give @a filled_map{map:0, Decorations:[{type:""target_point"", x:%{CO.flag.captureObject.centerX}%, z:%{CO.flag.captureObject.centerZ}%, rot:0.0f, id:""Target""}]} 1"
+    send "&c%{CO.flag.captureObject.centerX}%, %{CO.flag.captureObject.centerZ}% 에 거점이 생성되었습니다." to all players
+    send "나침반을 우클릭해 거점, 보급, 팀원의 위치를 확인할 수 있습니다." to all players
+    # make console execute command "/give @a filled_map{map:0, Decorations:[{type:""target_point"", x:%{CO.flag.captureObject.centerX}%, z:%{CO.flag.captureObject.centerZ}%, rot:0.0f, id:""Target""}]} 1"
     while block at {CO.flag.objloc} is air:
         set {_y} to y-coordinate of {CO.flag.objloc}
         set y-coordinate of {CO.flag.objloc} to {_y} - 1
@@ -173,7 +177,6 @@ function checkCaptureObject(bar: object,teamSize:number):
         set {_capturingTeam} to {_uniqueTeams::1}
         if {CO.flag.captureObject.conflict} == 0 or {CO.flag.captureObject.conflict} == 2:
             set {CO.flag.captureObject.conflict} to 1
-            play sound "subtitles.entity.experience_orb.pickup" with volume 1 and pitch 1 to all players
             if {_capturingTeam} is 1:
                 send "&c레드 팀이 거점을 점령중입니다!" to all players
             else if {_capturingTeam} is 2:
@@ -182,8 +185,9 @@ function checkCaptureObject(bar: object,teamSize:number):
                 send "&a그린 팀이 거점을 점령중입니다!" to all players
             else if {_capturingTeam} is 4:
                 send "&e옐로 팀이 거점을 점령중입니다!" to all players
-        add 1 to {CO.team.captures::%{_capturingTeam}%}
-        set bar progress of {_bar} to ({CO.team.captures::%{_capturingTeam}%} / 60) * 100
+        play sound "subtitles.entity.experience_orb.pickup" with volume 1 and pitch 1 to all players
+        add 1 to {BR.flag.team.captures::%{_capturingTeam}%}
+        set bar progress of {_bar} to ({BR.flag.team.captures::%{_capturingTeam}%} / 60) * 100
         if {_capturingTeam} is 1:
             set bar color of {_bar} to red
             set bar title of {_bar} to "&c거점 점령 상태 (%{CO.team.captures::%{_capturingTeam}%}%/60)"
@@ -196,18 +200,18 @@ function checkCaptureObject(bar: object,teamSize:number):
         else if {_capturingTeam} is 4:
             set bar color of {_bar} to yellow
             set bar title of {_bar} to "&e거점 점령 상태 (%{CO.team.captures::%{_capturingTeam}%}%/60)"
-        if {CO.team.captures::%{_capturingTeam}%} == 60:
+        if {BR.flag.team.captures::%{_capturingTeam}%} == 60:
             set {CO.flag.gametime} to 0
             set {CO.flag.timer} to 0
             set {CO.flag.phase} to 1
             if {_capturingTeam} is 1:
-                add 1 to {CO.team.score.1}
+                add 1 to {BR.flag.team.1.score}
             else if {_capturingTeam} is 2:
-                add 1 to {CO.team.score.2}
+                add 1 to {BR.flag.team.2.score}
             else if {_capturingTeam} is 3:
-                add 1 to {CO.team.score.3}
+                add 1 to {BR.flag.team.3.score}
             else if {_capturingTeam} is 4:
-                add 1 to {CO.team.score.4}
+                add 1 to {BR.flag.team.4.score}
             set {_message} to "&c레드 팀: %{CO.team.score.1}%"
             if {_teamSize} == 2:
                 set {_message} to "%{_message}% &fvs &9블루 팀: %{CO.team.score.2}%"
@@ -217,15 +221,18 @@ function checkCaptureObject(bar: object,teamSize:number):
                 set {_message} to "%{_message}% &fvs &e옐로 팀: %{CO.team.score.4}%"
             set bar title of {_bar} to "%{_message}%"
             set bar color of {_bar} to yellow
-            play sound "subtitles.entity.ender_dragon.growl" with volume 1 and pitch 1 to all players
+            play sound "entity.ender_dragon.growl" with volume 1 and pitch 1 to all players
             set bar progress of {_bar} to 0
-            loop {CO.team.captures::*}:
-                set {CO.team.captures::%loop-value%} to 0
+            delete {BR.flag.team.captures::*}
+            set {CO.flag.captureObject.conflict} to 0
     else if size of {_uniqueTeams::*} > 1:
         if {CO.flag.captureObject.conflict} == 1:
+            play sound "entity.player.levelup" with volume 1 and pitch 1 to all players
             set {CO.flag.captureObject.conflict} to 2
             send "&c거점에 여러 팀이 있습니다! 점수가 오르지 않습니다." to all players
-        set bar color of {_bar} to purple
+        set bar color of {_bar} to gray
+        set bar progress of {_bar} to 0
+        set bar title of {_bar} to "&5격돌 중!"
 
 
 
@@ -254,13 +261,6 @@ command /setGameTime [<number>]:
         else:
             set {CO.flag.gametime} to arg 1
             send "게임 시간을 &c%{CO.flag.gametime}%&f(으)로 설정했습니다." to player
-
-
-command /objectDebug:
-    trigger:
-        make player execute command "/setPhase 0"
-        captureObjectGameInit(1)
-        make player execute command "/setGameTime 299"
 
 command /clearObjectPoint:
     trigger:
